@@ -1,0 +1,41 @@
+<!doctype html>
+	<html ng-app="myApp">
+	<head>
+			<title>OVH - Summit 2017</title>
+			<link rel="shortcut icon" href="favicon.ico">
+			<link href="css/bootstrap.min.css" rel="stylesheet">
+			<link rel="stylesheet" href="css/custom.css">
+			<meta content="text/html;charset=utf-8" http-equiv="Content-Type">
+			<meta content="utf-8" http-equiv="encoding">
+	</head>
+	<body>
+		<div class="container" id="main">
+			<div class="row mt50">
+				<div class="col-xs-12">
+					<ul class="nav nav-tabs">
+						<li ng-class="getClass('welcome')"><a ui-sref="welcome">Bienvenue</a></li>
+						<li ng-class="getClass('logs')"><a ui-sref="logs">Logs</a></li>
+						<li ng-class="getClass('metrics')"><a ui-sref="metrics">Metrics</a></li>
+						<li ng-class="getClass('functions')"><a ui-sref="functions">Functions</a></li>
+						<li ng-class="getClass('tools')"><a ui-sref="tools">Outils</a></li>
+						<li ng-class="getClass('demo')"><a ui-sref="demo">Demo</a></li>
+					</ul>
+				</div>
+			</div>
+			<div ui-view scroll-spy></div>
+		</div>
+		<script src="js/jquery.min.js"></script>
+		<script src="js/angular.min.js"></script>
+		<script src="js/angular-sanitize.min.js"></script>
+		<script src="js/angular-clipboard.js"></script>
+		<script src="js/angular-websocket.min.js"></script>
+		<script src="js/angular-ui-router.min.js"></script>
+		<script src="js/app.js"></script>
+		<script src="js/conf.js"></script>
+		<script src="controllers/demo.js"></script>
+		<script src="controllers/tools.js"></script>
+		<script src="controllers/logs.js"></script>
+		<script src="controllers/metrics.js"></script>
+		<script src="controllers/functions.js"></script>
+	</body>
+</html>

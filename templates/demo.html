@@ -1,0 +1,52 @@
+<div ng-controller="DemoCtrl">
+    <div class="row">
+        <div class="col-xs-12">
+            <h1 class="page-header">Choisissez une page</h1>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-xs-6">
+            <form>
+                <div class="form-group">
+                    <select name="templates" ng-model="template" ng-change="load()" class="form-control">
+                        <option value="" selected disabled>Aucune</option>
+                        <option value="code200">200 OK</option>
+                        <option value="error400">400 Bad Request</option>
+                        <option value="error401">401 Unauthorized</option>
+                        <option value="error403">403 Forbidden</option>
+                        <option value="error404">404 Not Found</option>
+                        <option value="error500">500 Internal Server Error</option>
+                        <option value="error501">501 Not Implemented</option>
+                        <option value="error503">503 Service Unavailable</option>
+                        <option value="error550">550 Permission denied</option>
+                    </select>
+                </div>
+                <input type="text" id="loading" placeholder="Loading..." />
+                <input type="button" value="Auto-appel off" class="btn btn-default btn-block" ng-click="startTimer()" ng-show="!autorefresh" />
+                <input type="button" value="Auto-appel on" class="btn btn-success btn-block" ng-click="stopTimer()" ng-show="autorefresh" />
+                <input type="button" value="L'appeler encore" class="btn btn-primary btn-block" ng-click="reload()" ng-show="!autorefresh" />
+            </form>
+        </div>
+        <div class="col-xs-6 col-iframe">
+            <div class="iframe-container">
+                <iframe id="iframe" ng-src="{{activeTemplate}}" sandbox="allow-same-origin allow-scripts"></iframe>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-xs-8">
+            <h4>Suivre <a href="#/demo" ng-click="toggleWss()">{{isMine ? 'mes' : 'toutes les'}}</a> requêtes en direct depuis Logs Data Platform <small>{{status}}</small></h4>
+        </div>
+        <div class="col-xs-4">
+            <button type="button" class="btn btn-default pull-right" ng-click="clickHandler()" ng-show="!copied">Copier l'url WebSocket</button>
+            <button type="button" class="btn btn-success pull-right" ng-click="clickHandler()" ng-show="copied">Copié dans votre presse-papier!</button>
+        </div>
+        <div class="col-xs-12">
+            <div class="shell-wrap">
+                <ul class="shell-body">
+                        <li ng-repeat="message in messages" class="{{ message.status_code | message_status_color }}"><span class="text-muted">{{message.host}}</span> {{message.short_message}}</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>

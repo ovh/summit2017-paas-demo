@@ -1,0 +1,99 @@
+<div ng-controller="ToolsCtrl">
+    <div class="row">
+        <div class="col-md-12">
+            <h1 class="page-header">ssh {{demo.sshUri}}</h1>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-4">
+            <div class="thumbnail">
+                <a href="https://gra1.logs.ovh.com" target="_blank"><img
+                        src="images/graylog.png" alt="Graylog web interface"></a>
+                <div class="caption">
+                    <h5>Recherchez et visualisez sur Graylog</h5>
+                    <table class="table">
+                        <tr>
+                            <td>Identifiant LDP</td>
+                            <td><strong>{{demo.ldpUsername}}</strong></td>
+                        </tr>
+                        <tr>
+                            <td>Mot de passe</td>
+                            <td><strong>{{demo.ldpPassword}}</strong></td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="thumbnail">
+                <a href="https://grafana.tsaas.ovh.com/login" target="_blank"><img
+                        src="images/grafana.png" alt="Grafana"></a>
+                <div class="caption">
+                    <h5>Corrélez Metrics & Logs sur Grafana</h5>
+                    <table class="table">
+                        <tr>
+                            <td>Nic handle</td>
+                            <td><strong>{{demo.ovhNic}}</strong></td>
+                        </tr>
+                        <tr>
+                            <td>Mot de passe</td>
+                            <td><strong>{{demo.ovhPassword}}</strong></td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="thumbnail">
+                <a href="https://functions.ovh/" target="_blank"><img
+                        src="images/functions.png" alt="OVH Functions"></a>
+                <div class="caption">
+                    <h5>Instrumentalisez sur OVH Functions</h5>
+                    <table class="table">
+                        <tr>
+                            <td>Nic handle</td>
+                            <td><strong>{{demo.ovhNic}}</strong></td>
+                        </tr>
+                        <tr>
+                            <td>Mot de passe</td>
+                            <td><strong>{{demo.ovhPassword}}</strong></td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-4">
+            <div class="thumbnail">
+                <a href="https://github.com/ovh/ldp-tail/releases" target="_blank"><img src="images/final.gif" alt="ldp-tail"></a>
+                <div class="caption">
+                    <h5>Suivez les logs en temps réel</h5>
+                    <table class="table">
+                        <tr>
+                            <td>{{demo.wss}}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="thumbnail">
+                <a href="https://www.ovh.com/fr/data-platforms/metrics/" target="_blank"><img src="images/metrics.png" alt="ldp-tail"></a>
+                <div class="caption">
+                    <h4>À propos de Metrics</h4>
+                    <p>La plateforme managée pour vos métriques et séries temporelles.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="thumbnail">
+                <a href="https://www.ovh.com/fr/data-platforms/logs/" target="_blank"><img src="images/ldp.png" alt="ldp-tail"></a>
+                <div class="caption">
+                    <h4>À propos de Logs Data Platform</h4>
+                    <p>Indexez et analysez vos logs en temps réel. Soyez alertés en cas d'anomalie. Partagez vos données avec vos collaborateurs.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

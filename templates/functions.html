@@ -1,0 +1,429 @@
+<div ng-controller="FunctionsCtrl">
+    <div class="row">
+        <div class="col-md-12">
+            <h1 class="page-header">OVH Functions <small>Run event-driven serverless functions at scale.</small></h1>
+        </div>
+    </div>
+    <div class="row">
+    	<div class="col-sm-3">
+            <div sidenav>
+                  <!-- Sidenav goes here -->
+            </div>
+        </div>
+        <div class="col-sm-9">
+        	<h2 id="sec1">Introduction</h2> 
+			<p><a target="_blank" href="https://labs.ovh.com/ovh-functions">OVH Functions</a> est une plateforme FaaS (Function as a Service) qui vous permet de vous concentrer uniquement sur le code.</p>
+			<p>Vous écrivez des fonctions comme vous avez l'habitude de le faire et vous les déployer en une seule commande.</p>
+			<p>OVH Functions gère le packaging, le déploiement, l'exécution et la scalabilité de vos fonctions pour vous.</p>
+			<p>Vos fonctions peuvent être exécutées en utilisant un appel HTTP ou déclenchées automatiquement sur des flux d'événements.</p>
+
+		<h2 id="sec2">Créez votre première fonction</h2> 
+		Dans cette première section vous allez apprendre à déployer votre première fonction qui vous dira bonjour à chaque exécution ! 
+		<h3 id="sec2-1">Installez la dernière version du CLI</h3>
+		<p>Téléchargez et installez le cli comme ceci depuis une console :</p>
+        <pre>lab1@pc11:~$ cd
+lab1@pc11:~$ mkdir functions
+lab1@pc11:~$ cd functions
+lab1@pc11:~/functions$ wget https://get.functions.ovh/builds/Linux-amd64/ovh-functions
+lab1@pc11:~/functions$ export PATH=~/functions:$PATH
+lab1@pc11:~$ cd</pre>
+
+    <br/><p>Et rendez le cli exécutable avec la commande :
+    <pre>
+chmod u+x ~/functions/ovh-functions
+</pre>
+
+		<h3 id="sec2-2">Ecrivez votre fonction</h3>
+		<p>Créez un dossier, déplacez-vous à l'intérieur et générez l'exemple en utilisant la commande <i>init</i> :</p>
+		<pre>
+lab1@pc11:~$ mkdir -p hello
+lab1@pc11:~$ cd hello
+lab1@pc11:~/hello$ ovh-functions init
+</pre>
+		
+		<br/><p>Cet example est écrit en Node.js, mais la plateforme supporte plusieurs langages : <a target="_blank" href="https://docs.functions.ovh/#write-nodejs">Node.js</a>, <a target="_blank" href="https://docs.functions.ovh/#write-python">Python</a>, <a target="_blank" href="https://docs.functions.ovh/#write-go">Go</a>, <a target="_blank" href="https://docs.functions.ovh/#write-perl">Perl</a> et <a target="_blank" href="https://docs.functions.ovh/#write-bash">Bash</a>.
+    <br/>Pour générer un exemple dans un autre langage supporté, vous pouvez le spécifier dans la commande 'init', en remplaçant <i>nodejs</i> dans la commande précédente par : go, python-2.7, python-3.6, perl ou bash.</p>
+		
+		<br/><p>Par défaut une fonction Javascript 'hello' est écrite dans le fichier <i>example.js</i>.
+		<pre>
+exports.hello = function(event, callback) {
+  var name = event.data || "World";
+  console.log("event", event);
+  callback(null, "Hello " + name + " from OVH Functions!")
+}
+</pre>
+		
+		<br/><p>La configuration de la fonction est écrite dans un fichier nommé <i>functions.yml</i> pour décrire :</p>
+		<ul>
+			<li>le nom de la fonction : <i>hello</i></li>
+			<li>Le langage : <i>nodejs</i></li>
+			<li>Le 'handler' : <i>example.hello</i> composé de :
+				<ul>
+					<li><i>example</i> : Le nom du fichier sans extension qui contient le module nodejs</li>
+					<li><i>hello</i> : Le nom de la fonction exportée</li>
+				</ul>
+			</li>
+		</ul>
+		<pre>
+# functions.yml
+functions:
+  hello:
+    runtime: nodejs
+    handler: example.hello
+</pre>
+
+		<h3 id="sec2-3">Déployez votre fonction</h3>
+        <p>Commencez par vous connecter à la plateforme avec les identifiants suivants :</p>
+
+<table class="table">
+  <tr>
+    <td>Nic-handle</td>
+    <td><input type="text" class="form-control" value="{{demo.ovhNic}}" readonly=""></td>
+    <td>Mot de passe</td>
+    <td><input type="text" class="form-control" value="{{demo.ovhPassword}}" readonly=""></td>
+  </tr>
+</table>
+          
+		<pre>lab1@pc11:~/hello$ ovh-functions login</pre>
+		
+		<br/><p>Pour déployer ou mettre à jour votre fonction sur OVH Functions, exécutez la commande ci-dessous depuis le dossier où vous l'avez créée :</p>
+		<pre>lab1@pc11:~/hello$ ovh-functions deploy</pre>
+
+		<h3 id="sec2-4">Exécutez votre fonction</h3>
+		<p>Vous pouvez ensuite exécuter votre fonction en utilisant l'URL HTTP fournie en réponse de la commande deploy ou en utilisant la commande :</p>
+		<pre>lab1@pc11:~/hello$ ovh-functions exec hello</pre>
+		
+		<br/><p>Vous pouvez envoyer des données disponibles dans la fonction dans le paramètre <i>event.data</i> en pipant dans stdin :</p>
+		<pre>lab1@pc11:~/hello$ echo "toto" | ovh-functions exec hello</pre>
+
+		<h3 id="sec2-5">Quelques commandes utiles</h3> 
+		<p>Lister toutes vos fonctions :</p>
+		<pre>lab1@pc11:~/hello$ ovh-functions list</pre>
+		
+		<br/><p>Obtenez des détails à propos d'une de vos fonctions :</p>
+		<pre>lab1@pc11:~/hello$ ovh-functions describe hello</pre>
+		
+		<br/><p>Supprimez une de vos fonctions :</p>
+		<pre>lab1@pc11:~/hello$ ovh-functions delete hello</pre>
+		
+		<br/><p>Affichez les métriques de vos fonctions :</p>
+		<pre>lab1@pc11:~/hello$ ovh-functions metrics</pre>
+
+		<br/><p>Streamez ou affichez les logs de base de vos fonctions :</p>
+		<pre>
+lab1@pc11:~/hello$ ovh-functions logs -f
+lab1@pc11:~/hello$ ovh-functions logs -f hello
+lab1@pc11:~/hello$ ovh-functions logs
+lab1@pc11:~/hello$ ovh-functions logs hello
+lab1@pc11:~/hello$ ovh-functions logs -n 10
+lab1@pc11:~/hello$ ovh-functions logs hello -n 10
+</pre>
+		<p>Pour bénéficier de la puissance d'<i>OVH Logs Data Platform</i>, voir la section <a href="#/functions#sec6">Visualisez les logs de vos fonctions</a>.</p>
+
+    <h2 id="sec3">Exécutez des fonctions sur vos logs</h2>
+    <p>Vous allez voir dans cette partie comment exécuter une fonction sur chacun de vos logs produit sur un stream OVH Logs Data Platform. Commencez par vous déplacer dans un nouveau répertoire puis créez le fichier de configuration <i>functions.yml</i> :</p>
+    <pre>
+functions:
+  report-logs:
+    runtime: nodejs
+    handler: report.logs
+    events:
+      - logs:
+          stream-address: {{demo.wss}}
+</pre>
+
+    <br/><p>Enfin créez le fichier <i>report.js</i> qui contiendra le code de votre fonction :</p>
+    <pre>
+exports.logs = function(event, callback) {
+  console.log("status code :", event.data._status_code);
+
+  callback(null, "")
+}
+</pre>
+
+    <br/><p>Cette fonction affiche dans ses logs l'élément <i>status_code</i> du log qui a déclenché la fonction.</p>
+    <p>Déployez la :</p>
+    <pre>
+lab1@pc11:~/hello$ ovh-functions deploy
+</pre>
+    
+    <br/><p>Vous pouvez désormais générer des logs sur votre compte Logs Data Platform sur la page <a href="#/demo">démo</a> et streamer les logs de vos fonctions grâce à la commande :</p>
+    <pre>
+lab1@pc11:~/hello$ ovh-functions logs -f
+</pre>
+
+    <br/><p>Pour chaque log produit sur la page <a href="#/demo">démo</a> vous verrez alors une fonction exécutée.</p>
+
+    <h2 id="sec4">Exécutez des fonctions périodiquement</h2>
+    <p>Dans cet exemple vous allez voir comment afficher les logs reçus des 10 dernières secondes dans votre stream Logs Data Platform toutes les 10 secondes. Commencez par vous déplacer dans un nouveau répertoire puis créez le fichier de configuration <i>functions.yml</i> suivant :</p>
+    <pre>
+functions:
+  report-logs:
+    runtime: nodejs
+    handler: report.logs
+    environment:
+      LOGS_USER: {{demo.ldpUsername}}
+      LOGS_PASSWORD: {{demo.ldpPassword}} 
+      LOGS_STREAM: &ltyour-stream-id&gt
+    events:
+      - schedule:
+          rate: rate(10s)
+</pre>
+
+    <br/><p>Attention : N'oubliez pas de remplacer &ltyour-stream-id&gt par votre stream id que vous pouvez retrouver dans votre compte graylog.</p>
+    <p>Puis créer le fichier de code <i>report.js</i> :</p>
+    <pre>
+const request = require('request');
+
+exports.logs = function(event, callback) {
+  var auth = 'Basic ' + new Buffer(process.env.LOGS_USER + ':' + process.env.LOGS_PASSWORD).toString('base64');
+  var queryParameters = { query:'*', range:10, filter:'streams:'+process.env.LOGS_STREAM, sort:'timestamp:desc', fields:'message' };
+  const req = {
+    method: 'GET',
+    uri: 'https://gra1.logs.ovh.com/api/search/universal/relative',
+    headers : {
+          'Authorization' : auth
+    },
+    qs: queryParameters
+  };
+
+  request(req, function (err, resp) {
+    if (err) {
+      console.log('error:', err);
+      callback(`Erreur`);
+      return;
+    }
+    if (resp.statusCode != 200) {
+      console.log('error: ' + resp.statusCode + ' ' + resp.body);
+      callback(`Erreur`);
+      return;
+    }
+
+    if (resp.body) {
+      var logs = resp.body.split('\n');
+      for (var i=0; i&ltlogs.length; i++) {
+        console.log(logs[i]);
+      }
+    } else {
+      console.log('No logs received for the last 10 seconds');
+    }
+
+    callback(null, '');
+  })
+}
+</pre>
+
+    <br/><p>Déployez la :</p>
+    <pre>
+lab1@pc11:~/hello$ ovh-functions deploy
+</pre>
+  
+   <br/><p>Vous pouvez désormais générer des logs sur votre compte Logs Data Platform sur la page <a href="#/demo">démo</a> et streamer les logs de vos fonctions grâce à la commande :</p>
+    <pre>
+lab1@pc11:~/hello$ ovh-functions logs -f
+</pre>
+
+    <p>Toutes les 10 secondes vous verrez apparaître dans vos logs les 10 derniers logs générés sur la page <a href="#/demo">démo</a>.</p>
+
+		<h2 id="sec5">Créez un chatbot météo</h2>
+		<p>Vous vous demandez souvent quel temps il fera dans la journée pour savoir si vous devez enfiler votre plus chaud manteau ou vos plus belles tongs ? Alors cet exemple est fait pour vous !</p>
+		<p>Vous allez voir à quel point il est facile de créer une application avec OVH Functions, ici un chatbot qui répond quand on lui demande quel temps il fera à une date précise.</p>
+		<p>Pour celà nous avons déjà écrit une page web très simple qui envoie chaque message entré dans le chat à la fonction configurée. Mais avant de pouvoir dire à notre chatbot où se trouve sa fonction, il faut la créer, c'est parti !</p>
+
+		<h3 id="sec5-1">Créez la fonction</h3>
+		<p>Commencez par vous déplacer dans un nouveau répertoire puis créez le fichier de configuration <i>functions.yml</i> de la fonction que nous appelons <i>weather-chatbot</i> :</p>
+		<pre>
+#functions.yml
+functions:
+  weather-chatbot:
+    runtime: nodejs
+    handler: weather-chatbot.getMeteo
+</pre>
+
+		<br/><p>Créez ensuite le fichier de code <i>weather-chatbot.js</i> que vous allez compléter par la suite :</p>
+		<pre>
+const request = require('request');
+
+exports.getMeteo = function(event, callback) {
+  console.log("Message reçu:", event.data);
+  extractLocationAndDateFromMessage(event.data, callback);
+}
+
+function extractLocationAndDateFromMessage(userMsg, callback){
+  extractMeteoFromLocationAndDate("Paris", "17/10/2017", callback)
+}
+
+function extractMeteoFromLocationAndDate(location, date, callback){
+  callback(null, "Il fera beau à " + location + " le " + date)
+}
+</pre>
+
+		<br/>Puis déployez :
+		<pre>
+lab1@pc11:~/meteo$ ovh-functions deploy
+</pre>
+
+		<br/><p>Vous pouvez désormais entrer l'URL retournée par la commande précédente en query parameters dans l'URL du <a href="http://summit2017.functions.ovh/chatbot.html">chatbot</a>, en effet celle-ci ne changera pas quand vous mettrez à jour votre fonction, seulement si vous la supprimez et la recréez.</p>
+
+		<h3 id="sec5-2">Identifiez l'intention de l'utilisateur</h3>
+		<p>Pour identifier l'intention de l'utilisateur nous allons utiliser une plateforme dîte d'intelligence artificielle. Nous utiliserons la plateforme <a target="_blank" href="https://wit.ai/">wit.ai</a> dans cet exemple. La fonction va envoyer le message de l'utilisateur tel quel à la plateforme. Nous avons déjà programmé une application wit.ai qui reconnait si il s'agit d'une question à propos de la météo, et si c'est le cas elle renverra le lieu et la date de la météo souhaitée.</p>
+
+		<p>Modifiez la fonction <i>extractLocationAndDateFromMessage</i> du fichier <i>weather-chatbot.js</i> avec le code suivant :</p>
+		<pre>
+function extractLocationAndDateFromMessage(userMsg, callback){
+  const witAPIUrl = "https://api.wit.ai/message";
+
+  const req = {
+    method: 'GET',
+    uri: witAPIUrl+'?q='+userMsg,
+    headers: {
+      'Authorization': 'Bearer ' + process.env.WIT_TOKEN
+    }
+  };
+
+  request(req, function (err, resp) {
+    if (err) {
+      console.log('error:', err)
+      callback(`Erreur interne`);
+      return;
+    }
+
+    var intent = JSON.parse(resp.body);
+
+    if (intent.entities.weather_intent == null) {
+      callback(`Désolé je n'ai pas compris votre question.`);
+      return;
+    }
+
+    var location = intent.entities.location;
+    if (location == null) {
+      callback(`Où ça ?`);
+      return;
+    }
+
+    var dateTime = intent.entities.datetime;
+    if (dateTime == null) {
+      callback(`Quand ?`);
+      return;
+    }
+
+    extractMeteoFromLocationAndDate(location[0].value, new Date((dateTime[0].value).split('+')[0]), callback);
+  })
+}
+</pre>
+		
+		<br/><p>Et enfin modifiez le fichier de configuration <i>functions.yml</i> afin d'ajouter la variable d'environement <i>WIT_TOKEN</i>:
+		<pre>
+#functions.yml
+functions:
+  weather-chatbot:
+    runtime: nodejs
+    handler: weather-chatbot.getMeteo
+    environment:
+      WIT_TOKEN: {{demo['witToken']}}
+</pre>
+
+		<br/><p>Redéployer votre fonction avec la commande : </p>
+		<pre>lab1@pc11:~/meteo$ ovh-functions deploy</pre>
+
+		<br/><p>Pour tester le résultat de votre fonction, vous pouvez soit utiliser le chatbot, soit la commande :
+		<pre>
+lab1@pc11:~/meteo$ echo -n  "Quel temps fera-t-il demain à Paris ?" | ovh-functions exec weather-chatbot
+</pre>
+
+		<h3 id="sec5-3">Collectez les informations sur la météo</h3>
+		<p>Celà fait certes plaisir de savoir qu'il fera beau, mais ce sera une belle déception venu le jour J quand vous vous retrouverez en tongs par -10°c. Allons questionner une API de météo pour connaître le vrai temps et la température.
+		<br/>Nous avons choisi l'API d'<a target="_blank" href="https://www.apixu.com">apixu</a> pour collecter les informations sur la météo, celle-ci est très complète, fournit des prévisions jusqu'à 10 jours et renvoit un grand nombre de données. Nous nous intéresserons principalement au temps et aux températures dans cet exemple.</p>
+
+		<p>Modifiez la fonction <i>extractMeteoFromLocationAndDate</i> du fichier <i>weather-chatbot.js</i> avec le code suivant :</p>
+		<pre>
+function extractMeteoFromLocationAndDate(location, date, callback){
+  const apixuAPIUrl  = "https://api.apixu.com/v1/forecast.json";
+
+  var unixDate = (date.getTime() / 1000);
+  var queryParameters = { key:process.env.APIXU_TOKEN, q:location, lang:'fr', unixdt:unixDate };
+  const req = {
+    method: 'GET',
+    uri: apixuAPIUrl,
+    qs: queryParameters
+  };
+
+  request(req, function (err, resp) {
+    var userResp = new Object();
+    if (err) {
+      console.log('error:', err);
+      callback(`Erreur interne`);
+      return;
+    }
+    if (resp.statusCode != 200) {
+      console.log('error: ' + resp.statusCode + ' ' + resp.body);
+      callback(`Erreur interne`);
+      return;
+    }
+
+    var weather = JSON.parse(resp.body);
+
+    var location = weather.location;
+    if (location == null || location.name == null ) {
+    	callback(`Ville non trouvée`);
+    	return;
+    }
+    var city = location.name;
+    var region = location.region;
+    var country = location.country;
+
+    var dayForecast = weather.forecast.forecastday[0].day;
+    if (dayForecast == null) {
+    	callback(`Date trop éloignée`);
+    	return;
+    }
+    var condition = dayForecast.condition.text;
+    var minTemp = dayForecast.mintemp_c;
+    var maxTemp = dayForecast.maxtemp_c;
+
+    userResp.message = 'Le ' + date.getDate().toString() + '/' + date.getMonth().toString() + '/' + date.getFullYear().toString() + ' le temps sera ' + condition.toLowerCase() + ' à ' + city + ', ' + region + ', ' + country + '. La température minimale sera de ' + minTemp.toString() + '°c, et la température maximale sera de ' + maxTemp.toString() + '°c.';
+    userResp.condition_icon = (dayForecast.condition.icon).replace("//", "http://");
+
+    callback(null, JSON.stringify(userResp));
+  })
+}
+</pre>
+		
+		<br/><p>Et enfin modifiez le fichier de configuration <i>functions.yml</i> afin d'y ajouter la variable d'environement <i>APIXU_TOKEN</i> :
+		<pre>
+#functions.yml
+functions:
+  weather-chatbot:
+    runtime: nodejs
+    handler: weather-chatbot.getMeteo
+    environment:
+      WIT_TOKEN: {{demo['witToken']}}
+      APIXU_TOKEN: {{demo['apixuToken']}}
+</pre>
+		
+		<br/><p>Redéployer votre fonction avec la commande : </p>
+		<pre>lab1@pc11:~/meteo$ ovh-functions deploy</pre>
+
+		<br/>Félicitations ! Vous avez terminé la création de votre chatbot météo.
+
+		<h2 id="sec6">Visualisez les logs de vos fonctions</h2> 
+		<p>Vous pouvez facilement pousser les logs de vos fonctions sur la plateforme <i>OVH Logs data platform</i> en modifiant le fichier de configuration de votre fonction. Reprenons l'exemple de votre première fonction et modifiez le fichier <i>functions.yml</i> comme ceci :</p>
+		<pre>
+# functions.yml
+functions:
+  hello:
+    runtime: nodejs
+    handler: example.hello
+    logs:
+      - gelf-address: tcp+tls://gra1.logs.ovh.com:12202/?X-OVH-TOKEN={{demo['X-OVH-TOKEN']}}
+</pre>		
+		
+		<br/><p>Il ne vous reste ainsi plus qu'à utiliser <a target="_blank" href="#/logs#sec2-1">ldp-tail</a> ou <a target="_blank" href="#/logs#sec3">graylog</a> pour visualiser et filtrer les logs de vos fonctions.
+
+		<h2 id="sec7">Allez plus loin</h2>
+		<p>D'autres exemples sont disponibles sur <a target="_blank" href="https://github.com/ovhlabs/functions/tree/master/examples">Github</a> dans les langages <i>Node.js</i>, <i>Python</i>, <i>Go</i>, <i>Perl</i> et <i>Bash</i>.</p>
+		<p>Vous pouvez consulter la documentation complète <a target="_blank" href="https://docs.functions.ovh">ici</a>. Le cli OVH Functions est aussi disponible sur <a href="https://get.functions.ovh/builds/Darwin-amd64/ovh-functions">Mac</a> et <a href="https://get.functions.ovh/builds/Windows-amd64/ovh-functions.exe">Windows</a>.</p>
+        <br/><br/><br/><br/><br/>
+    </div>
+</div>
+</div>

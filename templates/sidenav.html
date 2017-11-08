@@ -1,0 +1,32 @@
+<!doctype html>
+<nav class="sidenav">
+  <ul>
+    <li class="" ng-repeat="h1 in tree.children" spy="{{h1.link}}">
+      <ul>
+        <li class="" ng-repeat="h2 in h1.children" spy="{{h2.link}}">
+          {{h2.text}}
+          <ul>
+            <li class="" ng-repeat="h3 in h2.children" spy="{{h3.link}}">
+              {{h3.text}}
+              <ul>
+                <li class="" ng-repeat="h4 in h3.children" spy="{{h4.link}}">
+                  {{h4.text}}
+                  <ul>
+                    <li class="" ng-repeat="h5 in h4.children" spy="{{h5.link}}">
+                      {{h5.text}}
+                      <ul>
+                        <li class="" ng-repeat="h6 in h5.children" spy="{{h6.link}}">
+                          {{h6.text}}
+                        </li>
+                      </ul>
+                    </li>
+                  </ul>
+                </li>
+              </ul>
+            </li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</nav>

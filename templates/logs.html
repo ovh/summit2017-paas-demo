@@ -1,0 +1,506 @@
+<div ng-controller="LogsCtrl">
+    <div class="row">
+        <div class="col-md-12">
+            <h1 class="page-header">Logs Data Platform <small>Indexez et analysez vos logs en temps réel. Soyez alerté en cas d'anomalie.</small></h1>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-sm-3">
+            <div sidenav>
+                  <!-- Sidenav goes here -->
+            </div>
+        </div>
+        <div class="col-sm-9">
+            <h2 id="sec1">Votre serveur web</h2>
+            <p>
+                Les pages que vous lisez en ce moment sont hébergées sur votre serveur dédié par un <strong>Apache 2</strong>.
+                <br/>Les logs (historique des événements) de ce service sont écrits de façon standard dans un fichier local.
+                <br/>Une autre application, <strong>syslog-ng</strong>, parcourt ce fichier. À chaque nouvelle entrée, elle transforme puis dirige l'événement vers <a target="_blank" href="https://www.ovh.com/fr/data-platforms/logs/">Logs Data Platform</a> (LDP).
+            </p>
+
+            <h3 id="sec1-1">Les logs d'Apache</h3>
+            <p>Explorons la configuration du serveur : depuis votre poste, ouvrez un terminal et effectuez la commande suivante :</p>
+            <pre><code>lab1@pc11:~$ ssh {{demo.sshUri}}</code></pre>
+            <p>Une fois connecté sur la machine, suivez les logs de votre serveur en appelant :</p>
+            <pre>debian@{{demo.vpsId}}:~$ tail -f /var/log/apache2/access.log</pre>
+            <p>
+                Retournez sur votre navigateur, puis rafraîchissez la page courante avec la touche F5 par exemple.
+                <br/>Vous devriez voir une nouvelle ligne apparaître dans ce fichier indiquant votre appel.
+            </p>
+            <pre>185.32.101.59 - - [09/Oct/2017:16:22:28 +0000] "GET /js/conf.js HTTP/1.1" 200 942 "http://{{demo.vpsId}}.monito.ovh/" "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:56.0) Gecko/20100101 Firefox/56.0"
+185.32.101.59 - - [09/Oct/2017:16:22:28 +0000] "GET /controllers/tools.js HTTP/1.1" 200 448 "http://{{demo.vpsId}}.monito.ovh/" "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:56.0) Gecko/20100101 Firefox/56.0"
+185.32.101.59 - - [09/Oct/2017:16:22:28 +0000] "GET /templates/demo.html HTTP/1.1" 200 1224 "http://{{demo.vpsId}}.monito.ovh/" "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:56.0) Gecko/20100101 Firefox/56.0"
+185.32.101.59 - - [09/Oct/2017:16:27:04 +0000] "GET / HTTP/1.1" 200 797 "-" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Ubuntu Chromium/61.0.3163.79 Chrome/61.0.3163.79 Safari/537.36"
+185.32.101.59 - - [09/Oct/2017:16:27:04 +0000] "GET /css/bootstrap.min.css HTTP/1.1" 200 20083 "http://{{demo.vpsId}}.monito.ovh/" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Ubuntu Chromium/61.0.3163.79 Chrome/61.0.3163.79 Safari/537.36"
+185.32.101.59 - - [09/Oct/2017:16:27:04 +0000] "GET /css/custom.css HTTP/1.1" 200 947 "http://{{demo.vpsId}}.monito.ovh/" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Ubuntu Chromium/61.0.3163.79 Chrome/61.0.3163.79 Safari/537.36"
+185.32.101.59 - - [09/Oct/2017:16:27:04 +0000] "GET /js/angular-sanitize.min.js HTTP/1.1" 200 2605 "http://{{demo.vpsId}}.monito.ovh/" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Ubuntu Chromium/61.0.3163.79 Chrome/61.0.3163.79 Safari/537.36"
+185.32.101.59 - - [09/Oct/2017:16:27:04 +0000] "GET /js/angular-clipboard.js HTTP/1.1" 200 1428 "http://{{demo.vpsId}}.monito.ovh/" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Ubuntu Chromium/61.0.3163.79 Chrome/61.0.3163.79 Safari/537.36"
+</pre>
+            <p>Chacune de ces lignes fourmille d'informations. Elles indiquent, entre autres, l'IP à l'origine de la demande, la date d'appel, la page demandée, le succès de l'opération et la taille du fichier.</p>
+            <div class="alert alert-info">
+                S'il est possible d'analyser ces contenus au cas par cas avec des commandes d’expert (tail, grep, awk), il serait plus convivial pour vos collaborateurs d'en faire des données visuelles disponibles depuis un simple navigateur. Vous pouvez aussi agréger les valeurs sur de longues durées pour une multitude de serveurs, déclencher des alertes selon des conditions précises ou, encore, instrumentaliser les logs sur vos propres morceaux de code.
+            </div>
+
+            <h3 id="sec1-2">Syslog-ng comme moteur de collecte</h3>
+            <p>Pour rendre tout cela possible, nous avons créé pour vous un flux de données sur LDP qui nous a retourné un identifiant unique (token) : <code>{{demo['X-OVH-TOKEN']}}</code>
+            </p>
+            <p>Chaque ligne de logs adressée à LDP doit contenir ce token afin que nous puissions l'associer au bon flux de données.
+                <br/>Si de multiples logiciels et librairies standards permettent de faire cette association facilement, nous allons nous intéresser ici à <strong>syslog-ng</strong>.
+            </p>
+            <p>Ce programme vieux de 20 ans permet de désigner une source de logs (ici votre fichier d'accès Apache), un template (c'est-à-dire une transformation de la ligne en une structure clé-valeur) et une destination.
+                <br/>Ce logiciel étant indépendant du serveur web, il ne met pas en péril votre service et, mieux encore, il est capable de reprendre le fil de vos logs en cas d'indisponibilité.
+            </p>
+            <p>Jetons un œil à la configuration du connecteur Apache vers LDP :</p>
+            <pre>debian@{{demo.vpsId}}:~$ vim /etc/syslog-ng/conf.d/syslogng-apache-logger.conf</pre>
+            <p>Ce fichier de configuration ordonne à votre <strong>syslog-ng</strong> de pousser vos logs web sur deux flux de données (l'un privé, l'autre collectif à la salle ici présente). La nuance se situe donc au niveau du token de flux LDP.</p>
+            <ul>
+                <li>La première directive <code>s_apache</code> définit la source de logs, ici notre fichier d'accès Apache.</li>
+                <li>Les deux suivantes <code>t_apache_access</code> indiquent le format de message qui sera envoyé à LDP, ici <a href="http://ltsv.org" target="_blank">LTSV</a>.</li>
+                <li>La directive <code>p_apache</code> précise comment traiter les lignes de logs.</li>
+                <li>Les instructions de destinations <code>dt_apache_access</code> définissent les méthodes et adresses d'envoi sur LDP.</li>
+                <li>Enfin, les deux directives <code>log</code> assemblent le tout.</li>
+            </ul>
+            <p>
+                Afin d'y voir plus clair, pourquoi ne pas temporairement afficher les entrées formatées en LTSV aussi dans un fichier local ?
+                <br/>Pour cela, rajoutez la destination suivante :
+            </p>
+            <pre>destination dt_debug_ldp {
+    file("/tmp/summit.log", template(t_apache_access_log));
+};</pre>
+            <p>Ainsi que celle-ci :</p>
+            <pre>log {
+    source(s_apache);
+    parser(p_apache);
+    destination(dt_debug_ldp);
+};</pre>
+            <p>Redémarrez syslog-ng pour tenir compte de vos modifications :</p>
+            <pre>debian@{{demo.vpsId}}:~$ sudo /etc/init.d/syslog-ng restart
+[ ok ] Restarting syslog-ng (via systemctl): syslog-ng.service.</pre>
+            <p>Générez à présent un peu de trafic sur votre site, puis observez vos logs cette fois-ci formatés dans <strong>/tmp/summit.log</strong>. Vous devriez y trouver des lignes de ce type (clé:valeur ponctuées de tabulations) :</p>
+            <pre>type:apache-access.log	X-OVH-TOKEN:{{demo['X-OVH-TOKEN']}}	time:09/Oct/2017:18:00:17 +0000	host:{{demo.vpsId}}.monito.ovh	remote_ip:109.190.254.9	request:GET /templates/demo.html HTTP/1.1	status_code:200	reponse_size:1261	referer:http://54.36.103.73/	user_agent:Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Ubuntu Chromium/61.0.3163.79 Chrome/61.0.3163.79 Safari/537.36	message:109.190.254.9 - - [09/Oct/2017:18:00:17 +0000] "GET /templates/demo.html HTTP/1.1" 200 1261 "http://54.36.103.73/" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Ubuntu Chromium/61.0.3163.79 Chrome/61.0.3163.79 Safari/537.36"</pre>
+
+            <h3 id="sec1-3">Enrichissons les données</h3>
+            <p>
+                Si Apache fournit des informations déjà utiles, il est capable d’en faire bien plus grâce au module <a href="https://httpd.apache.org/docs/current/fr/mod/mod_log_config.html">mod_log</a>.
+                <br/>Editons le fichier de configuration du serveur pour enregistrer le maximum de valeurs.
+            </p>
+            <pre>debian@{{demo.vpsId}}:~$ sudo vim /etc/apache2/sites-available/001-summit-2017.conf</pre>
+            <p>Rajoutez les deux directives suivantes à partir de la ligne <strong>22</strong> :</p>
+            <pre>LogFormat "%h %l %u %t \"%r\" %>s %B \"%U%q\" %H %m %X %I %O %D \"%{Host}i\" \"%{Referer}i\" \"%{User-agent}i\"" extended
+CustomLog  ${APACHE_LOG_DIR}/extend_access.log extended</pre>
+            <p>Mettez également à jour la configuration de syslog-ng pour adapter les champs :</p>
+            <pre>debian@{{demo.vpsId}}:~$ sudo vim /etc/syslog-ng/conf.d/syslogng-apache-logger.conf</pre>
+            <p>Remplacez tout le contenu du fichier par celui-ci :</p>
+            <p><textarea class="form-control" readonly="" rows="10">source s_apache {
+    file("/var/log/apache2/extend_access.log" flags(no-parse));
+};
+
+template t_apache_access_log {
+    template("type:extended-apache-access.log\tX-OVH-TOKEN:{{demo['X-OVH-TOKEN']}}\ttime:${APACHE.TIMESTAMP}\thost:${HOST}\tremote_ip:${APACHE.CLIENT_IP}\tstatus_code:${APACHE.REQUEST_STATUS}\tresponse_bytes_int:${APACHE.CONTENT_LENGTH}\turl_request:${APACHE.URL_REQUEST}\tprotocol:${APACHE.PROTOCOL}\tmethod:${APACHE.METHOD}\tresponse_status:${APACHE.RESPONSE_STATUS}\treceived_bytes_int:${APACHE.RECEIVED_LENGTH}\tsent_bytes_int:${APACHE.SENT_LENGTH}\trequest_time_num:${APACHE.REQUEST_TIME}\tsite:${APACHE.SITE}\treferer:${APACHE.REFERER}\tuser_agent:${APACHE.USER_AGENT}\tmessage:${MSG}\n");
+    template_escape(no);
+};
+
+template t_apache_access_global {
+    template("type:extended-apache-access.log\tX-OVH-TOKEN:demo\ttime:${APACHE.TIMESTAMP}\thost:${HOST}\tremote_ip:${APACHE.CLIENT_IP}\tstatus_code:${APACHE.REQUEST_STATUS}\tresponse_bytes_int:${APACHE.CONTENT_LENGTH}\turl_request:${APACHE.URL_REQUEST}\tprotocol:${APACHE.PROTOCOL}\tmethod:${APACHE.METHOD}\tresponse_status:${APACHE.RESPONSE_STATUS}\treceived_bytes_int:${APACHE.RECEIVED_LENGTH}\tsent_bytes_int:${APACHE.SENT_LENGTH}\trequest_time_num:${APACHE.REQUEST_TIME}\tsite:${APACHE.SITE}\treferer:${APACHE.REFERER}\tuser_agent:${APACHE.USER_AGENT}\tmessage:${MSG}\n");
+    template_escape(no);
+};
+
+destination dt_apache_access_ldp {
+    tcp("gra1.logs.ovh.com"
+        port(12201)
+        tls(ca_dir("/etc/ssl/certs"))
+        ts_format("rfc3339") template(t_apache_access_log)
+        keep-alive(yes)
+        so_keepalive(yes)
+        log-fifo-size(30000)
+        persist-name(apache_access_user_ldp)
+    );
+};
+
+destination dt_apache_access_global {
+    tcp("gra1.logs.ovh.com"
+        port(12201)
+        tls(ca_dir("/etc/ssl/certs"))
+        ts_format("rfc3339") template(t_apache_access_global)
+        keep-alive(yes)
+        so_keepalive(yes)
+        log-fifo-size(30000)
+        persist-name(apache_access_global_ldp)
+    );
+};
+
+parser p_apache {
+    csv-parser(columns("APACHE.CLIENT_IP", "APACHE.IDENT_NAME", "APACHE.USER_NAME","APACHE.TIMESTAMP", "APACHE.REQUEST_URL", "APACHE.REQUEST_STATUS","APACHE.CONTENT_LENGTH", "APACHE.URL_REQUEST", "APACHE.PROTOCOL", "APACHE.METHOD", "APACHE.RESPONSE_STATUS", "APACHE.RECEIVED_LENGTH", "APACHE.SENT_LENGTH", "APACHE.REQUEST_TIME", "APACHE.SITE", "APACHE.REFERER", "APACHE.USER_AGENT")
+    flags(escape-double-char,strip-whitespace)
+    delimiters(" ")
+    quote-pairs('""[]')
+    );
+};
+
+log {
+    source(s_apache);
+    parser(p_apache);
+    destination(dt_apache_access_ldp);
+};
+
+log {
+    source(s_apache);
+    parser(p_apache);
+    destination(dt_apache_access_global);
+};</textarea></p>
+            <p>Relancez les services Apache et syslog-ng comme suit :</p>
+            <pre>debian@{{demo.vpsId}}:~$ sudo /etc/init.d/syslog-ng restart
+[ ok ] Restarting syslog-ng (via systemctl): syslog-ng.service.
+debian@{{demo.vpsId}}:~$ sudo /etc/init.d/apache2 restart
+[ ok ] Restarting apache2 (via systemctl): apache2.service.</pre>
+            <p>
+                Par cette simple manipulation, vous venez de scinder le champ <strong>request</strong> en trois : <code>method</code>, <code>protocol</code> et <code>url_request</code>.
+                <br/>Vous avez également ajouté le temps de requête : <code>request_time_num</code>, le nom du <code>site</code> et la quantité de données échangée dans le transfert: <code>sent_bytes_int</code> et <code>response_bytes_int</code>.
+            </p>
+
+            <hr/>
+            <h2 id="sec2">Suivre vos logs à distance</h2>
+            <p>
+                La problématique de l’envoi des logs étant maintenant résolue, intéressons-nous à leur réception sur LDP.
+                <br/>Avant d'être indexés dans Elasticsearch, tous vos logs sont d'abord normalisés au format <a href="http://docs.graylog.org/en/2.3/pages/gelf.html" target="_blank">Gelf</a> puis enregistrés dans le bus d'événements <a href="https://kafka.apache.org/" target="_blank">Kafka</a>.
+                <br/>Kafka a de multiples avantages en matière de résistance aux pannes, de persistance, de robustesse et de délivrance. C'est notre garde-fou en cas de retard sur l'indexation ou lorsque nous devons effectuer des maintenances sur les couches Graylog, Elasticsearch ou Cold Storage.
+            </p>
+            <h3 id="sec2-1">ldp-tail</h3>
+            <p>Chez OVH nous avons développé un serveur <strong>WebSocket</strong> ainsi qu'un outil de lignes de commande open source <a href="https://github.com/ovh/ldp-tail" target="_blank">ldp-tail</a> autour de Kafka. Cela vous permet de suivre vos logs comme sur un tail -f mais de façon distribuée. Vous bénéficiez aussi de la richesse des logs structurés pour opérer des règles avancées en matière de filtres ou d'affichage.</p>
+            <p>Jugez par vous-même : quittez votre serveur VPS pour retourner sur la console de votre poste, puis appelez :</p>
+            <pre>lab1@pc11:~$ ldp-tail --address {{demo.wss}} --raw
+2017/10/09 20:21:52 Connecting to gra1.logs.ovh.com ...
+2017/10/09 20:21:52 Connected!</pre>
+            <p>Une fois n'est pas coutume, générez du trafic sur votre site. Des entrées brutes apparaîtront alors en console.</p>
+            <pre>{"_referer":"-","_remote_ip":"185.32.101.59","_request":"GET / HTTP/1.1","_response_bytes_int":"3452","_status_code":"200","_type":"apache-access.log","_user_agent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Ubuntu Chromium/61.0.3163.79 Chrome/61.0.3163.79 Safari/537.36","host":"{{demo.vpsId}}.monito.ovh","short_message":"185.32.101.59 - - [10/Oct/2017:16:53:43 +0000] \"GET / HTTP/1.1\" 200 3452 \"-\" \"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Ubuntu Chromium/61.0.3163.79 Chrome/61.0.3163.79 Safari/537.36\"","timestamp":1.507654423E9,"version":"1.1"}</pre>
+            <p>Vos logs sont affichés au format Gelf, soit un JSON avec une légère spécification propre aux problématiques des logs.</p>
+            <p>Sur cette base, intéressons-nous au temps de réponse de nos pages et affichons un code couleur par niveau de criticité. Pour plus de commodité, nous allons écrire deux fichiers <strong>mine.toml</strong> et <strong>global.toml</strong> :</p>
+            <pre>lab1@pc11:~$ vim mine.toml</pre>
+            <p>Le premier, <strong>mine.toml</strong>, aura pour adresse votre adresse WebSocket dédiée :</p>
+            <pre>Address = "{{demo.wss}}"</pre>
+            <p>Alors que le second, <strong>global.toml</strong> aura l'adresse globale :</p>
+            <pre>Address = "wss://gra1.logs.ovh.com/tail/?tk=demo"</pre>
+            <p>Enfin, les deux auront cette directive qui aura pour effet de moduler la couleur d'affichage selon le temps de réponse, d’afficher la date, le nom du serveur, la page appelée et le temps de réponse :</p>
+            <pre ng-non-bindable>Pattern = "{{if (lt (int ._request_time_num) 500)}}{{color \"green\"}}{{else if (lt (int ._request_time_num) 1000)}}{{color \"yellow\"}}{{else}}{{color \"red\"}}{{end}}{{date .timestamp}} | {{ printf \"%-80s\" (join \" \" ._site ._url_request )}} | {{ ._status_code }} | {{ duration ._request_time_num 1000000 }}{{noColor}}"</pre>
+            <p>Appelez l'une ou l'autre configuration :</p>
+            <pre>lab1@pc11:~$ ldp-tail --config mine.toml
+2017/10/10 19:06:34 Connecting to gra1.logs.ovh.com...
+2017/10/10 19:06:34 Connected!
+2017-10-10 19:06:38 | {{demo.vpsId}}.monito.ovh /index.html                                                    | 200 | 866ms
+</pre>
+            <p>Ou demandez à votre voisin de recharger le contenu de sa page tout en observant la configuration global.toml.</p>
+            <p>Si vous rencontrez des erreurs de ce type en console :</p>
+            <pre>2017/10/10 19:09:42 Error while executing template: template: template:1:14: executing "template" at <._request_time_num>: invalid value; expected string</pre>
+            <p>Cela indique que l'un de vos collaborateurs n'a pas encore <a href="#/logs#sec1-3">enrichi ses logs.</a>. C'est le moment de l'aider !</p>
+
+            <h3 id="sec2-2">Générateur de logs</h3>
+            <p>Il est temps de vous parler rapidement de notre outil de génération de logs.</p>
+            <p>Celui-ci est composé de deux parties :</p>
+            <ul>
+                <li>un sélectionneur de page appelant votre site sur l'un des codes standards Apache, un bouton vous permettant de la rappeler ou de le faire automatiquement toutes les secondes ;</li>
+                <li>une console en JavaScript se connectant comme ldp-tail au WebSocket de votre flux ou à celui de toute la salle.</li>
+            </ul>
+            <p>Vous trouverez cet outil dans l'onglet <a ui-sref="demo">« Démo »</a>. Il vous sera utile dans les sections qui suivent.</p>
+
+            <hr/>
+            <h2 id="sec3">Recherchez et visualisez sur Graylog</h2>
+
+            <h3 id="sec3-1">La recherche</h3>
+
+            <p>
+                Ouvrez un navigateur vers l'interface suivante : <a href="https://gra1.logs.ovh.com" target="_blank">https://gra1.logs.ovh.com</a>. Vous arriverez sur cette page de connexion :
+            </p>
+            <img src="images/logs/graylog-sign.png" class="img-responsive"/>
+            <br/>
+            <p>Renseignez vos identifiants LDP :</p>
+            <table class="table table-bordered table-striped">
+                <tr>
+                    <td class="col-xs-2">Identifiant</td>
+                    <td><input type="text" class="form-control" value="{{demo.ldpUsername}}" readonly/></td>
+                </tr>
+                <tr>
+                    <td class="col-xs-2">Mot de passe</td>
+                    <td><input type="text" class="form-control" value="{{demo.ldpPassword}}" readonly/></td>
+                </tr>
+            </table>
+
+            <p>Une fois identifié, la page d'accueil vous présente une liste de deux streams qui correspondent à deux flux de données distincts :</p>
+
+            <ul>
+                <li>Summit 2017 - {{demo.vpsId}} Logs</li>
+                <li>Démo Summit 2017 - Tous les logs</li>
+            </ul>
+
+            <p>Cliquez sur le lien <strong>« Démo Summit 2017 - Tous les logs »</strong>. Une fois sur ce flux, vous avez accès à tous les logs générés par les participants au workshop.</p>
+            <p>C'est intéressant, mais comment retrouver la 404 que vous venez de générer parmi ceux-ci ? Simplement en utilisant la barre de recherche située en haut. Avant cela, si vous cliquez sur l'une des lignes, vous verrez que les logs sont ce que l'on appelle des documents structurés.</p>
+            <p>Chaque ligne de logs a été découpée en champs représentant chacun une information. Tous les champs spécifiés dans la configuration de votre outil de collecte (syslog-ng) apparaissent ici. De plus, LDP permet d’enrichir automatiquement certaines informations.</p>
+            <p>Par exemple, le champ <strong>remote_ip</strong> a été reconnu comme contenant une IP, permettant ainsi la création à la volée des champs <code>remote_ip_city_name</code>, <code>remote_ip_country</code>, <code>remote_ip_geolocation</code>. Comme vous l'avez deviné, ces informations permettent de géolocaliser l'IP cliente et, donc, de savoir d'où provient la requête.</p>
+            <img src="images/logs/graylog-doc.png" class="img-responsive"/>
+            <br/>
+            <p>Revenons maintenant à la question précédente : comment retrouver vos logs parmi tous les autres ? Dans un premier temps, faites la recherche suivante dans la barre située en haut :</p>
+
+            <p><input type="text" class="form-control" value="source:{{demo.vpsId}}.monito.ovh" readonly/></p>
+
+            <p>Alternativement, vous pouvez aussi repérer le champ source dans un de vos logs et utiliser la loupe tout à droite pour l’ajouter directement à la barre de recherche.</p>
+            <img src="images/logs/graylog-search.png" class="img-responsive"/>
+            <br/>
+            <p>Validez votre recherche en utilisant le bouton vert ou appuyez sur <em>« Entrée »</em>. Vous devez maintenant avoir uniquement les logs de votre instance.</p>
+            <p>Le sélecteur de période est situé juste au-dessus de la barre de recherche. Vous pouvez effectuer des recherches sur une durée relative (par exemple, les 5 dernières minutes, les 8 dernières heures ou les 7 derniers jours), une durée absolue (entre 2017-09-25 20:30:00 et 2017-09-26 20:30:00) ou l'un des mots clés en anglais (comme « Last hour »).</p>
+            <p>Dès que vous avez vos logs, effectuez une sélection plus fine en recherchant par exemple les erreurs 500. Pour cela, utilisez le mot clé <code>AND</code> :</p>
+
+            <p><input type="text" class="form-control" value="source:{{demo.vpsId}}.monito.ovh AND status_code:500" readonly/></p>
+
+            <p>Vous avez maintenant uniquement les logs qui contiennent les erreurs 500. Même si la recherche est très efficace avec des couples clé/valeur, vous pouvez utiliser uniquement des termes contenus dans vos logs. Exemple :</p>
+
+            <p><input type="text" class="form-control" value="source:{{demo.vpsId}}.monito.ovh AND Firefox" readonly/></p>
+
+            <p>Vous obtiendrez alors toutes les requêtes contenant le mot clé « Firefox » (présent ici dans le user agent si Firefox a été utilisé pour accéder à votre site).</p>
+            <p>Il existe bien d'autres façons d'utiliser la barre de recherche, notamment avec les mots clés <code>OR</code> ou <code>NOT</code>. Vous pouvez aussi utiliser l'opérateur <code>*</code> qui correspond à <em>n'importe quel caractère</em> (par exemple, <code>status_code:4*</code> va chercher toutes les erreurs de type 4XX) ou ne demander que les logs contenant un champ spécifique : <code>_exists_:status_code</code>. N'hésitez pas à expérimenter avec vos différents champs. Si vous voulez aller plus loin, nous restons aussi à votre disposition.</p>
+            <p>La recherche de logs est un outil puissant afin de remonter dans votre historique et de comprendre les différents types de requêtes qui surviennent sur votre site web. Elle vous offre, par exemple, la possibilité de retracer facilement le trajet d'une IP sur votre site et de comprendre sa navigation. Cependant, LDP a aussi pour but de vous permettre de <strong>superviser votre infrastructure et vos logiciels</strong>, ainsi que de déceler un comportement inhabituel de ceux-ci. Utiliser une barre de recherche peut être fastidieux et chronophage. Afin d'avoir une vue complète sur votre projet, vous pouvez construire un tableau de bord qui contiendra différents indicateurs graphiques (appelées widgets) : des courbes, des histogrammes, des compteurs et des diagrammes circulaires (communément appelés camemberts).</p>
+
+            <h3 id="sec3-2">Les tableaux de bords</h3>
+            <p>Obtenez un aperçu de ce qu'il est possible de faire en utilisant l'onglet <strong>« Dashboards »</strong> situé en haut du site web.</p>
+            <p>De la même manière que sur la page « Streams », vous disposez d'un tableau de bord pour votre instance et d'un tableau de bord général. Naviguez vers le tableau de bord <strong>« Summit 2017 - Tous les logs »</strong>. Vous pouvez y voir différentes informations sous forme graphique.</p>
+            <img src="images/logs/graylog-dashboard.png" class="img-responsive"/>
+            <br/>
+            <p>Nous vous proposons de créer un tableau de bord similaire basé sur vos logs. Pour cela, rendez-vous sur la page <strong>« Streams »</strong> et cliquez sur le stream correspondant à votre instance : <strong>« Summit 2017 - demo-1 Logs »</strong>.</p>
+            <p>Commencez par rechercher les logs correspondant aux <strong>8 dernières heures</strong>. Vous obtiendrez un histogramme avec vos logs.</p>
+            <img src="images/logs/graylog-summit.png" class="img-responsive"/>
+            <br/>
+            <p>Vous devez nommer ce widget, choisir si vous voulez afficher les tendances à la hausse ou à la baisse, puis définir quelle tendance représente une amélioration de la santé de votre produit.</p>
+            <p>Ajoutez ce widget. Rendez-vous ensuite dans l'onglet <strong>« Dashboard »</strong>, puis dans votre tableau de bord afin de vérifier que celui-ci est bien présent. Retournez alors dans votre stream.</p>
+
+            <h4 id="sec3-2-1">Widget « Quick Values »</h4>
+            <p>Essayons maintenant une tâche plus complexe, un diagramme circulaire sur les pages qui génèrent le plus d'erreurs (n'oubliez pas de <a ui-sref="demo">générer</a> ce type de logs au préalable). Pour cela, faites au préalable une recherche pour identifier ce type de logs :</p>
+
+            <p><input type="text" class="form-control" value="status_code:4* OR status_code:5*" readonly/></p>
+            <p>Vous devriez avoir uniquement les logs dont les statuts de retour sont de type 4XX (problème au niveau de la requête) ou 5XX (problème au niveau du serveur).</p>
+            <p>Pour générer un diagramme circulaire sur les requêtes, repérez le champ <em>request</em> dans la liste des champs à gauche. Cliquez sur la flèche bleue afin de faire apparaître quatre possibilités :</p>
+            <ul>
+                <li><strong>Generate Chart</strong> : permet de générer un graphique sur une valeur numérique ;</li>
+                <li><strong>Quick Values</strong> : permet de générer un diagramme circulaire des termes les plus fréquents ;</li>
+                <li><strong>Statistics</strong> : permet d'afficher différentes statistiques sur un champ numérique ;</li>
+                <li><strong>World Map</strong> : permet d'afficher vos résultats géolocalisés sous la forme d'une carte du monde.</li>
+            </ul>
+            <img src="images/logs/graylog-widget.png" class="img-responsive"/>
+            <br/>
+            <p>Cliquez sur <strong>« Quick Values »</strong> afin de faire apparaître un diagramme des erreurs générées.</p>
+            <p>Vous obtenez alors un diagramme des requêtes générant le plus d'erreurs. Si vous modifiez votre recherche, cette représentation se met à jour en conséquence.  Utilisez le bouton <em>Add to Dashboard</em> en haut à droite du widget pour ajouter celui-ci à votre tableau de bord. Vous pouvez aussi choisir d’afficher les termes ou de masquer le diagramme.</p>
+            <img src="images/logs/graylog-widget-conf.png" class="img-responsive"/>
+            <br/>
+
+            <h4 id="sec3-2-2">Widgets numériques</h4>
+            <p>LDP est capable de vous fournir des analyses numériques. Cependant, vous devez prendre certaines précautions. En effet, afin de pouvoir déterminer avec certitude les champs numériques, nous avons pour convention de les suffixer avec <code>_num</code>. Si vous tentez de générer un widget <strong>Statistics</strong> avec le champ <em>status_code</em> par exemple, Graylog vous renverra une erreur indiquant que le champ n'est pas un champ numérique (même s'il ne contient que des nombres).</p>
+            <p>C'est la raison pour laquelle certains champs sont suffixés avec <code>_num</code> dans la configuration du collecteur syslog-ng. LDP utilise des conventions pour les nombres (<code>_num</code>, <code>_float</code>, <code>_double</code>, <code>_int</code>, <code>_long</code>), les booléens (<code>_bool</code>) et les coordonnées geospatiales (<code>_geolocation</code>).</p>
+            <p>Générez maintenant un widget de type <strong>Generate Chart</strong> avec le champ <strong>response_bytes_int</strong>. Vous obtiendrez alors un graphique que vous pouvez personnaliser grâce au bouton <strong>Customize</strong>. La forme du graphique ainsi que la valeur affichée (minimum, maximum, moyenne, somme, total et cardinalité) peuvent être ainsi choisies.</p>
+            <p>Ce widget possède une particularité : la requête associée est immutable. Cela veut dire que si vous changez la requête, le graphique ne se mettra pas à jour.</p>
+            <p>Il s’agit d’une fonctionnalité utile pour comparer deux graphiques ou même les combiner ! Vérifiez-le par vous-même en effectuant les étapes suivantes :</p>
+            <ul>
+                <li>recherchez <code>status_code:4*</code> ;</li>
+                <li>dépliez le champ <strong>response_bytes_int</strong> à gauche puis sélectionnez <strong>Generate Chart</strong> ;</li>
+                <li>effectuez une nouvelle recherche <code>status_code:5*</code> ;</li>
+                <li>regénérez un nouveau graphique : <strong>Generate Chart</strong> sur le champ <strong>response_bytes_int</strong> ;</li>
+                <li>comparez alors la différence entre les deux graphiques et modifiez leurs apparences respectives.</li>
+            </ul>
+            <p>Pour combiner les deux graphiques, repérez le bouton avec trois traits horizontaux, en haut à droite du widget. Cliquez et maintenez ce bouton pour ensuite faire un glisser-déposer sur le deuxième graphique. Et voilà, les deux graphiques sont combinés.</p>
+            <img src="images/logs/graylog-widget-combined.png" class="img-responsive"/>
+            <br/>
+            <p>Vous pouvez ensuite ajouter un tel graphique à votre tableau de bord.</p>
+
+            <p>Le widget <strong>Statistics</strong> vous permet d’ajouter un compteur de type statistiques à votre tableau de bord, ainsi que d'analyser différentes statistiques en une seule requête. Ajoutez par exemple la somme de la taille des requêtes générées par votre site web sur une journée.</p>
+            <ul>
+                <li>Pour cela, faites une recherche sur <strong>24 heures</strong> en utilisant le sélecteur de période en haut de la page.</li>
+                <li>Générez ensuite un widget de type <strong>Statistics</strong> avec sur le champ <strong>response_bytes_int</strong>.</li>
+                <li>Ajoutez enfin ce widget à votre tableau de bord en prenant soin de sélectionner <strong>Sum</strong> en tant que <strong>Statistical Function</strong>.</li>
+            </ul>
+            <img src="images/logs/graylog-widget-stats.png" class="img-responsive"/>
+            <br/>
+
+            <h4 id="sec3-2-3">Widget « World Map »</h4>
+            <p>Le widget World Map est spécial puisqu'il ne fonctionne qu'avec un format bien particulier : seule une chaîne de caractères sous une forme <code>latitude, longitude</code> doit être présente. Essayez-le avec le champ <strong>remote_ip_geolocation</strong>.</p>
+            <p>Vous obtenez une carte avec des points de différentes tailles vous indiquant le nombre de logs produits par certains lieux dans le monde. Cela est évidemment utile pour comprendre facilement d'où provient votre trafic.</p>
+            <div class="alert alert-info">Vous avez maintenant fait le tour des principales fonctionnalités de Graylog. Nous vous invitons à explorer la recherche afin d'avoir un aperçu des différentes possibilités. LDP ne se limite cependant pas à Graylog et vous offre d'autres moyens d'exploiter vos logs.</div>
+
+            <hr/>
+            <h2 id="sec4">Corrélez LDP et Metrics sur Grafana</h2>
+            <p>Comme nous l'avons vu, Graylog permet de parcourir rapidement vos logs flux par flux et d'exporter des éléments visuels sur des tableaux de bord à des fins d'observation continue.</p>
+            <p>
+                Sur LDP, nous proposons à nos utilisateurs d'étendre les possibilités d'exploitation de leurs données en ouvrant l'API Elasticsearch.
+                <br/>Ce déverrouillage permet de bénéficier d'outils avancés et spécialisés, tels que <a href="https://www.elastic.co/fr/products/kibana" target="_blank">Kibana</a>, <a href="https://www.elastic.co/fr/blog/timelion-timeline" target="_blank">Timelion</a>, <a href="https://grafana.com/">Grafana</a>, <a href="https://github.com/Yelp/elastalert">Elastalert</a>, <a href="https://www.dremio.com/">Dremio</a>, <a href="https://www.dataiku.com/">Dataiku</a>, etc.
+            </p>
+            <p>Nous allons privilégier ici Grafana qui a le double avantage de permettre de corréler des données venant de sources diverses (ici LDP et Metrics) et de ne demander aucun effort d'installation : une plateforme SaaS est fournie par OVH.</p>
+            <img src="images/logs/grafana_both.png" class="img-responsive"/>
+
+            <h3 id="sec4-1">Un mot sur les alias</h3>
+            <p>Sans trop rentrer dans le détail, pour permettre l'accès à vos logs sur l'API Elasticsearch, une étape est nécessaire : la création d'un alias.</p>
+            <p>Un alias est un objet Elasticsearch représentant une vue en lecture seule sur un ensemble d'éléments filtrés : un ou plusieurs flux de données Graylog.</p>
+            <p>Pour accélérer le déroulement de ce workshop, sachez juste que nous avons créé pour chaque compte un alias Elasticsearch pointant sur votre flux Graylog personnel.</p>
+            <p>Le vôtre se nomme <strong>{{demo.aliasName}}</strong></p>
+
+            <h3 id="sec4-2">LDP comme source de données</h3>
+            <p>Rentrons dans le vif du sujet en connectant Grafana à LDP. Pour cela, veuillez vous rendre <a href="https://grafana.tsaas.ovh.com/login" target="_blank">sur cette page</a> avec ces accès:</p>
+            <table class="table table-bordered table-striped">
+                <tr>
+                    <td class="col-xs-2">Identifiant</td>
+                    <td><input type="text" class="form-control" value="{{demo.ovhNic}}" readonly/></td>
+                </tr>
+                <tr>
+                    <td class="col-xs-2">Mot de passe</td>
+                    <td><input type="text" class="form-control" value="{{demo.ovhPassword}}" readonly/></td>
+                </tr>
+            </table>
+            <p>Grafana étant multitenant, vous allez devoir créer votre organisation pour y sauvegarder vos sources de données et tableaux de bords.</p>
+            <p>Pour ce faire, cliquez sur l'icône en haut à gauche puis sur <strong>« Demo Summit »</strong> et enfin <strong>« + New organization »</strong>.</p>
+            <img src="images/logs/new_orga.png"/>
+            <br/><br/>
+            <p>Choisissez un nom d'organisation, sauvegardez, laissez les valeurs par défaut, puis cliquez à nouveau sur l'icône en haut à gauche puis dans l’onglet <strong>« Data Sources »</strong>.</p>
+            <p>Sur cette nouvelle page, cliquez à présent sur le bouton vert: <strong>« + Add data source »</strong>. Remplissez les valeurs comme suit:</p>
+            <div class="row">
+                <div class="col-xs-7">
+                    <img src="images/logs/conf_grafana.png" class="img-responsive"/>
+                </div>
+                <div class="col-xs-5">
+                    <dl>
+                        <dt>URL :</dt>
+                        <dd><input type="text" class="form-control" value="https://gra1.logs.ovh.com:9200" readonly/></dd>
+                        <dt>User :</dt>
+                        <dd><input type="text" class="form-control" value="{{demo.ldpUsername}}" readonly/></dd>
+                        <dt>Password :</dt>
+                        <dd><input type="text" class="form-control" value="{{demo.ldpPassword}}" readonly/></dd>
+                        <dt>Index name :</dt>
+                        <dd><input type="text" class="form-control" value="{{demo.aliasName}}" readonly/></dd>
+                        <dt>Time field name :</dt>
+                        <dd><input type="text" class="form-control" value="timestamp" readonly/></dd>
+                    </dl>
+                </div>
+            </div>
+            <br/>
+            <p>Validez l'enregistrement en cliquant sur <strong>« Add »</strong>, testez juste après l'accès en pressant le bouton <strong>« Save & Test »</strong>.</p>
+            <h3 id="sec4-3">Metrics comme source de données</h3>
+            <p>Profitons-en pour déclarer la source de données <strong>Metrics</strong>, si vous ne l'avez pas déjà fait.</p>
+            <div class="row">
+                <div class="col-xs-7">
+                    <img src="images/logs/conf_grafana_metrics.png" class="img-responsive"/>
+                </div>
+                <div class="col-xs-5">
+                    <dl>
+                        <dt>URL :</dt>
+                        <dd><input type="text" class="form-control" value="{{demo.opentsdb}}" readonly/></dd>
+                        <dt>User :</dt>
+                        <dd><input type="text" class="form-control" value="{{demo.vpsId}}" readonly/></dd>
+                        <dt>Password :</dt>
+                        <dd><input type="text" class="form-control" value="{{demo.metricsRead}}" readonly/></dd>
+                    </dl>
+                </div>
+            </div>
+            <br/>
+
+            <h3 id="sec4-4">Quelques propositions de widgets</h3>
+            <p>L'essentiel est fait : Grafana est maintenant configuré pour interroger Metrics et LDP ; vos données sont prêtes à être affichées. Nous vous donnons dans ce chapitre quelques exemples de widgets à créer.</p>
+
+            <h4 id="sec4-3-1">Répartion par code HTTP</h4>
+            <p>Puisque notre <a ui-sref="demo">générateur de logs</a> s'appuie sur les codes HTTP, le plus évident serait de représenter la répartition dans le temps.</p>
+            <ul>
+                <li>Créez, si ce n'est pas déjà fait, un nouveau tableau de bord en cliquant sur l'icône <strong>« Grafana »</strong>, puis sur <strong>« Dashboards »</strong> et <strong>« + New »</strong>.</li>
+                <li>Choisissez un nouveau widget de type <strong>« Graph »</strong>.</li>
+                <li>Cliquez sur son titre <strong>« Panel title »</strong> puis <strong>« Edit »</strong> pour éditer sa configuration.</li>
+                <li>Dans l'onglet <strong>Metrics</strong>, renseignez les valeurs telles que décrites dans la capture suivante.</li>
+            </ul>
+            <img src="images/logs/by_status.png" class="img-responsive"/>
+            <br/>
+            <p>Cette configuration crée une ligne par type de statut HTTP (terme <strong>status_code</strong>) présentée dans le temps (terme <strong>timestamp</strong>) et agrège les résultats par intervalles de 2 secondes.</p>
+            <p>Sauvegardez le widget en cliquant sur l'icône en forme de disquette en haut.</p>
+
+            <h4 id="sec4-3-2">Les pages les plus lentes à répondre</h4>
+            <p>Les logs étant par définition des documents textuels, Grafana propose un widget pratique : <strong>« Table »</strong>. Celui-ci vous permettra d'afficher dans l'ordre les pages les plus lentes de votre site.</p>
+            <ul>
+                <li>Ajoutez une nouvelle ligne d'éléments en cliquant sur <strong>« Add row »</strong></li>
+                <li>Choisissez le widget <strong>Table</strong></li>
+                <li>Dans l'onglet Metrics, sélectionnez <strong>« Raw document »</strong></li>
+            </ul>
+            <img src="images/logs/raw_doc.png" class="img-responsive"/>
+            <br/>
+            <p>Ne prenez que les logs dont le champ <strong>url_request</strong> existe avec un pas de temps de 10 secondes et un type de métriques <strong>« Raw Document »</strong>.</p>
+            <p>Dans l'onglet <strong>« Options »</strong>, définissez les valeurs suivantes :</p>
+            <img src="images/logs/table_options.png" class="img-responsive"/>
+            <br/>
+            <p>Transformez le Raw Document en <strong>« JSON data »</strong>, ce qui vous permet d'obtenir des colonnes que vous pourrez personnaliser.</p>
+
+            <h4 id="sec4-3-3">Charge CPU et nombre de requêtes</h4>
+            <p>Le but de ce widget est de représenter, dans le même graphique, la charge CPU grâce à la source de données Metrics et le volume global de requêtes sur LDP.</p>
+            <p>La subtilité de ce réglage consiste à désigner en <em>Panel data source</em> la valeur : <strong>-- Mixed --</strong>.</p>
+            <img src="images/logs/grafana_both_conf.png" class="img-responsive"/>
+            <br/>
+            <p>Pour séparer les deux séries sur les axes gauches-droites, il vous faudra éditer ces paramètres :</p>
+            <img src="images/logs/grafana_both_conf_more.png" class="img-responsive"/>
+            <br/>
+            <h4 id="sec4-3-4">Observez votre serveur en temps réel</h4>
+            <p>Activez <em>l'auto-refresh</em> en cliquant sur le sélectionneur de temps en haut à droite de Grafana. Puis choisissez <strong>« 5s »</strong> dans la liste déroulante de <strong>« Refreshing every »</strong>.</p>
+            <p>Rendez-vous maintenant sur la page de <a ui-sref="demo">démo</a> : prenez une page au hasard et activez là aussi l'auto-appel.</p>
+            <p>Ou stressez votre serveur en appelant l'utilitaire <strong>ab</strong> (apache benchmark) sur la machine distante, par exemple :</p>
+            <pre>debian@{{demo.vpsId}}:~$ ab -n 100 -c 10 https://{{demo.vpsId}}.monito.ovh/
+Licensed to The Apache Software Foundation, http://www.apache.org/
+
+Benchmarking {{demo.vpsId}}.monito.ovh (be patient).....done
+</pre>
+            <p>Observez les graphiques évoluer sur Grafana.</p>
+            <img src="images/logs/grafana.png" class="img-responsive"/>
+            <hr/>
+
+            <h2 id="sec5">Logs Data Platform, c'est aussi…</h2>
+            <p>LDP est, pour résumer, une infrastructure de logs architecturée autour de <strong>Kafka</strong> (sécurisation), <strong>Graylog</strong> (multitenant) et <strong>Elasticsearch</strong> (you know, for search).</p>
+            <p>Sur ce socle, nous proposons trois services complémentaires :</p>
+
+            <h3 id="sec5-1">Les outils de collecte dédiés</h3>
+            <p>Dans certaines situations, il peut être complexe de structurer certains logs à la source. Des outils comme <a href="https://www.elastic.co/fr/products/logstash" target="_blank">Logstash</a> sont habituellement utilisés pour extraire d'une ligne d'événement l'ensemble des champs utiles. Cela a un certain coût CPU-RAM pour votre serveur que nous vous épargnons en hébergeant l'outil chez OVH.</p>
+            <p>Un outil de collecte étant dédié et réservé à vos IP, nous plaçons pour chaque message reçu le token du associé. Ceci allège aussi l'effort d'intégration.</p>
+            <img src="images/logs/ldp-logstash.png" class="img-responsive"/>
+
+            <h3 id="sec5-2">La gestion des alertes</h3>
+            <p>
+                Si vous avez la possibilité de garder un œil sur vos tableaux de bord, de rechercher dans le passé de possibles anomalies et de tracer leurs parcours dans votre chaîne applicative, l'idéal serait d'être prévenu au moment où ces dysfonctionnements se produisent.
+            </p>
+            <p>Sans entrer dans les détails, sachez que LDP vous propose une variété de conditions d'alerte : compteurs de messages, statistiques ou textuelles. Afin d'éviter du bruit inutile, celles-ci peuvent s'annuler si la condition n'est pas répétée dans une période de grâce que vous pouvez définir.
+                Vous avez également la possibilité d’ordonner à LDP de regrouper l'ensemble des messages correspondant aux conditions dans la même alerte.
+            </p>
+            <p>
+                Une fois configurées, vos alertes ressembleront à cela :
+            </p>
+            <img src="images/logs/ldp-alert.png" class="img-responsive img-thumbnail" />
+
+            <h3 id="sec5-3">Le stockage longue durée</h3>
+            <p>
+                Comme vous le savez, les logs ont une valeur légale. Tout hébergeur de contenu est dans l'obligation de conserver les logs de ses services durant un an : <a href="https://www.legifrance.gouv.fr/affichTexte.do?cidTexte=JORFTEXT000000637071&categorieLien=id" target="_blank">décret n° 2006-358 du 24 mars 2006 relatif à la conservation des données des communications électroniques</a>.
+            </p>
+            <p>
+                Ce stockage peut être aussi pratique dans d'autres situations : incident grave, piratage, recyclage des machines (virtuelles ou non), double point de sauvegarde.
+            </p>
+            <p>
+                Si LDP offre 45 jours de rétention sur Elasticsearch pour la recherche à chaud et le plus dur étant déjà fait (structuration, configuration, acheminement), il serait dommage de s'arrêter là.
+                <br/>Nous vous proposons de dépasser cette limite, via une simple activation du stockage à froid des flux de votre choix pour un, deux, cinq ou dix ans.
+                Concrètement, nous utilisons <a href="https://www.ovh.com/fr/public-cloud/storage/cloud-archive/">OVH Public Cloud Archive</a> pour y stocker de façon journalière l'ensemble du trafic du flux et vous permettre de récupérer vos archives à n'importe quel moment.
+            </p>
+            <img src="images/logs/unsealing.png" class="img-responsive"/>
+            <br/>
+            <div class="alert alert-info">
+                <p>Vous avez acquis toutes les notions importantes de notre service. S'il vous reste un peu de temps, n'hésitez pas à retrouver tout le contenu que vous avez utilisé sur <a href="https://www.ovh.com/manager/sunrise/dbaasLogs/index.html#/dbaasLogs" target="_blank">notre espace client</a></p>
+                <br/>
+                <table>
+                    <tr>
+                        <td>Identifiant</td>
+                        <td><input type="text" class="form-control" value="{{demo.ovhNic}}" readonly/></td>
+                    </tr>
+                    <tr>
+                        <td>Mot de passe</td>
+                        <td><input type="text" class="form-control" value="{{demo.ovhPassword}}" readonly/></td>
+                    </tr>
+                </table>
+            </div>
+            <hr/>
+            <h2 id="sec6">One more thing...</h2>
+            <p>Vous êtes arrivé jusqu'ici sans encombre ? Bravo ! Appelez-nous et, sur présentation de votre travail, nous vous remettrons votre certificat d'excellence !</p>
+            <p>Une dernière chose, <a ui-sref="functions">Functions</a> dispose d'un <em>trigger logs</em>. C'est-à-dire que vous pouvez indiquer pour une fonction donnée un lien WebSocket LDP et instrumentaliser votre code autour de chaque log perçu. Ceci vous ouvre ainsi une porte vers de nouveaux horizons.</p>
+            <br/><br/><br/><br/><br/>
+        </div>
+    </div>
+</div>
